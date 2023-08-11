@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+
+# Cd to the parent dir so that we can run this script from any folder
+BASEDIR="$(dirname "${BASH_SOURCE[0]}")"
+PARENT_DIR="$BASEDIR/.."
+cd "$PARENT_DIR" || exit
+
+docker build --progress plain -t "tmc-code-server" .

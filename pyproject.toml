@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "csc-notebooks-code-server"
+version = "0.1.0"
+description = ""
+authors = ["Henrik Nygren <nygrenh@gmail.com>"]
+license = "APACHE-2.0"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^1.25.2"
+matplotlib = "^3.7.2"
+scikit-learn = "^1.3.0"
+pandas = "^2.0.3"
+seaborn = "^0.12.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
