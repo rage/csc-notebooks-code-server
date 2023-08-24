@@ -1,7 +1,7 @@
 FROM archlinux:latest as base
 
 RUN pacman -Syu --noconfirm && \
-  pacman -S python-poetry --noconfirm \
+  pacman -S python-poetry python-pip --noconfirm \
   && rm -rf /var/cache/pacman/pkg/*
 
 # Add a regular user for building packages and for running processes in the final image
@@ -31,16 +31,15 @@ USER user
 
 # Preinstall the TMC extension
 RUN mkdir -p /home/user/.code-server/extensions \
-  && code-server --install-extension moocfi.test-my-code --extensions-dir /home/user/.code-server/extensions
+  && code-server --install-extension moocfi.test-my-code --extensions-dir /home/user/.code-server/extensions \
+  && code-server --install-extension ms-python.python --extensions-dir /home/user/.code-server/extensions \
+  && code-server --install-extension ms-toolsai.jupyter --extensions-dir /home/user/.code-server/extensions
 
-RUN cd /home/user \
-  && mkdir build-venv
-
-COPY poetry.lock pyproject.toml /home/user/build-venv/
-
+USER root
+# Convert poetry lock file to requirements.txt
+COPY pyproject.toml poetry.lock /home/user/build-venv/
 RUN cd /home/user/build-venv \
-  && poetry config virtualenvs.in-project true \
-  && poetry install
+  && poetry export -f requirements.txt --output requirements.txt
 
 # ----------------------------------------------
 # Final image
@@ -53,17 +52,18 @@ RUN pacman -U /tmp/code-server.pkg.tar.zst --noconfirm \
   && rm -rf /var/cache/pacman/pkg/* \
   && rm /tmp/code-server.pkg.tar.zst
 
-# Set up virtualenv
-COPY --from=builder --chown=user /home/user/build-venv/.venv /opt/venv
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 # Use the preinstalled extensions
 COPY --from=builder --chown=user /home/user/.code-server/extensions /home/user/.code-server/extensions
 
 USER user
 
+# install python dependencies
+COPY --from=builder --chown=user /home/user/build-venv/requirements.txt /home/user/build-venv/requirements.txt
+RUN pip install --user --break-system-packages -r /home/user/build-venv/requirements.txt
+RUN rm -rf /home/user/build-venv
+
+
 RUN mkdir -p /home/user/Code
 
-CMD ["/usr/bin/code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "--disable-telemetry", "--disable-update-check", "--extensions-dir", "/home/user/.code-server/extensions", "/home/user/Code"]
+ENTRYPOINT ["/usr/bin/code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "--disable-telemetry", "--disable-update-check", "--extensions-dir", "/home/user/.code-server/extensions", "/home/user/Code"]
 EXPOSE 8080
